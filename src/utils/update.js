@@ -11,8 +11,8 @@
  * 6. 引导用户手动安装
  */
 
-const VERSION_CODE = 330
-const VERSION_NAME = "1.23.0"
+import { VERSION_CODE } from "@/utils/version"
+
 
 const UPDATE_CHECK_URL = "https://api.move.wuyaoxuexi.cn/tvbox_update.json"
 

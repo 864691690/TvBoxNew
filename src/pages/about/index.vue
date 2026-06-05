@@ -56,9 +56,8 @@
 </template>
 
 <script>
+import { VERSION_NAME } from "@/utils/version"
 import BackButton from "@/components/BackButton.vue"
-
-const VERSION_NAME = "1.23.0"
 
 export default {
   components: { BackButton },

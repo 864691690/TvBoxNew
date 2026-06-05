@@ -18,9 +18,9 @@
           >
             <text class="nav-text">{{ item.name }}</text>
           </view>
-        </view>
-        <view class="nav-search" @click="goSearch" :focusable="true">
-          <text class="search-icon">🔍</text>
+          <view class="nav-search" @click="goSearch" :focusable="true">
+            <text class="search-icon">🔍</text>
+          </view>
         </view>
       </view>
 
@@ -221,6 +221,7 @@ import { getVodList, getFilteredVodList } from "@/api/vod"
 import { DEFAULT_PIC, fixPicUrl } from "@/api/config"
 import { autoFocus } from "@/utils/focus"
 import { formatTime } from "@/utils/format"
+import { store } from "@/store"
 import epMixin from "@/mixins/epMixin"
 
 export default {
@@ -331,8 +332,7 @@ export default {
     },
     loadContinueWatch() {
       try {
-        const history = uni.getStorageSync("play_history") || []
-        this.continueList = history.slice(0, 6).map(h => ({
+        this.continueList = store.state.history.slice(0, 6).map(h => ({
           ...h,
           vod_pic: this.fixPicUrl(h.vod_pic || ""),
         }))
@@ -384,9 +384,8 @@ export default {
     // P5: 检查追剧更新数量
     checkFollowUpdates() {
       try {
-        const follows = uni.getStorageSync("my_follows") || []
         let count = 0
-        for (const f of follows) {
+        for (const f of store.state.follows) {
           if (f.newEp && f.newEp > 0) count++
         }
         this.followUpdateCount = count
@@ -414,7 +413,7 @@ export default {
 }
 .nav-logo { margin-right: 60rpx; }
 .logo-text { font-size: 48rpx; font-weight: bold; color: #00d4ff; text-shadow: 0 0 20rpx rgba(0,212,255,0.5); }
-.nav-menu { display: flex; flex-direction: row; gap: 40rpx; flex: 1; }
+.nav-menu { display: flex; flex-direction: row; gap: 40rpx; }
 .nav-item { padding: 16rpx 40rpx; border-radius: 8rpx; transition: all 0.2s ease; }
 .nav-item.active { background: rgba(0,212,255,0.2); }
 .nav-text { font-size: 32rpx; color: #8aa; }

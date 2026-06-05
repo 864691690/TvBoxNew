@@ -238,6 +238,7 @@ import { getVodDetail } from "@/api/vod"
 import { fixPicUrl } from "@/api/config"
 import { autoFocus } from "@/utils/focus"
 import { formatTime } from "@/utils/format"
+import { store } from "@/store"
 
 // 方向键 keyCode
 const KEY_DPAD_UP = 19
@@ -410,10 +411,7 @@ export default {
       }
     },
     getPlayHistory() {
-      try {
-        const history = uni.getStorageSync("play_history") || []
-        return history.find(h => h.vod_id === this.vodId)
-      } catch (e) { return null }
+      return store.getHistory(this.vodId)
     },
     resumePlay() {
       this.resumeDialogVisible = false
@@ -616,8 +614,9 @@ export default {
       this.routePanelVisible = false
       this.errorMsg = ""
       this.buffering = true
-      this._failedRoutes = null
-      // 保存线路偏好（不保存旧线路的视频进度）
+      // 不在此清空 _failedRoutes —— 只在 onPlaying（播放成功）时清空
+      // 避免自动切换线路时重复尝试已失败的线路
+      // 保存线路偏好
       this.saveProgress()
       // 确保视频重新加载播放
       this.$nextTick(() => { if (this.videoContext) this.videoContext.play() })
@@ -644,27 +643,16 @@ export default {
     },
     saveProgress() {
       if (this.currentTime <= 0) return
-      try {
-        let history = uni.getStorageSync("play_history") || []
-        const index = history.findIndex(h => h.vod_id === this.vodId)
-        const record = {
-          vod_id: this.vodId,
-          vod_name: this.title,
-          vod_pic: this.vodPic,
-          episode: this.currentEp,
-          progress: this.currentTime,
-          duration: this.duration,
-          activeRoute: this.activeRoute, // P3: 线路记忆
-          time: Date.now()
-        }
-        if (index >= 0) {
-          history[index] = record
-        } else {
-          history.unshift(record)
-        }
-        history = history.slice(0, 50)
-        uni.setStorageSync("play_history", history)
-      } catch (e) {}
+      store.addHistory({
+        vod_id: this.vodId,
+        vod_name: this.title,
+        vod_pic: this.vodPic,
+        episode: this.currentEp,
+        progress: this.currentTime,
+        duration: this.duration,
+        activeRoute: this.activeRoute,
+        time: Date.now()
+      })
     },
     formatTime,
     clearTimers() {
@@ -716,18 +704,12 @@ export default {
     },
     // P5: 字幕开关
     loadSubtitleSetting() {
-      try {
-        this.subtitleEnabled = uni.getStorageSync("subtitle_enabled") || false
-      } catch (e) { this.subtitleEnabled = false }
+      this.subtitleEnabled = store.getSubtitle()
     },
     toggleSubtitle() {
       this.subtitleEnabled = !this.subtitleEnabled
-      uni.setStorageSync("subtitle_enabled", this.subtitleEnabled)
-      if (this.subtitleEnabled) {
-        uni.showToast({ title: "字幕已开启", icon: "none", duration: 1200 })
-      } else {
-        uni.showToast({ title: "字幕已关闭", icon: "none", duration: 1200 })
-      }
+      store.setSubtitle(this.subtitleEnabled)
+      uni.showToast({ title: this.subtitleEnabled ? "字幕已开启" : "字幕已关闭", icon: "none", duration: 1200 })
     },
     // P3: 方向键快捷操作 - 注册按键监听
     setupKeyHandler() {

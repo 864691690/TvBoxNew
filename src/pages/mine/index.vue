@@ -125,10 +125,10 @@
 import { DEFAULT_PIC, BASE_URL, fixPicUrl, API } from "@/api/config"
 import { autoFocus } from "@/utils/focus"
 import { checkUpdate } from "@/utils/update"
+import { VERSION_NAME } from "@/utils/version"
 import { formatTime } from "@/utils/format"
+import { store } from "@/store"
 import BackButton from "@/components/BackButton.vue"
-
-const VERSION_NAME = "1.23.0"
 
 export default {
   components: { BackButton },
@@ -155,7 +155,7 @@ export default {
     this.loadSettings()
     this.calcCacheSize()
     // 恢复排序偏好
-    try { this.historySortBy = uni.getStorageSync("_history_sort") || "time" } catch (e) {}
+    try { this.historySortBy = store.getHistorySort() } catch (e) {}
   },
   onReady() {
     this.$nextTick(() => autoFocus(this.$el))
@@ -168,7 +168,7 @@ export default {
     },
     loadHistory() {
       try {
-        let list = (uni.getStorageSync("play_history") || []).map(h => ({
+        let list = (store.state.history || []).map(h => ({
           ...h,
           vod_pic: this.fixPicUrl(h.vod_pic || ""),
           _sortTime: h.time || h.timestamp || 0
@@ -179,7 +179,7 @@ export default {
     toggleHistorySort() {
       this.historySortBy = this.historySortBy === "time" ? "name" : "time"
       this.sortHistory(this.historyList)
-      uni.setStorageSync("_history_sort", this.historySortBy)
+      store.setHistorySort(this.historySortBy)
     },
     sortHistory(list) {
       if (this.historySortBy === "name") {
@@ -191,7 +191,7 @@ export default {
     },
     loadCollects() {
       try {
-        this.collectList = (uni.getStorageSync("my_collects") || []).map(c => ({
+        this.collectList = store.state.collects.map(c => ({
           ...c,
           vod_pic: this.fixPicUrl(c.vod_pic || "")
         }))
@@ -199,12 +199,11 @@ export default {
     },
     loadFollows() {
       try {
-        this.followList = (uni.getStorageSync("my_follows") || []).map(f => ({
+        this.followList = store.state.follows.map(f => ({
           ...f,
           vod_pic: this.fixPicUrl(f.vod_pic || ""),
           _oldTotalEp: f.totalEp || 0
         }))
-        // 异步批量检测追剧更新
         this.checkFollowUpdates()
       } catch (e) { this.followList = [] }
     },
@@ -265,12 +264,10 @@ export default {
     fixPicUrl,
     loadSettings() {
       try {
-        const quality = uni.getStorageSync("default_quality") || "high"
+        const quality = store.getQuality()
         const qualityMap = { high: "高清", super: "超清", blue: "蓝光" }
         this.qualityText = qualityMap[quality] || "高清"
-        // P5: 字幕设置
-        const subtitle = uni.getStorageSync("subtitle_enabled") || false
-        this.subtitleText = subtitle ? "开启" : "关闭"
+        this.subtitleText = store.getSubtitle() ? "开启" : "关闭"
       } catch (e) {}
     },
     calcCacheSize() {
@@ -294,7 +291,7 @@ export default {
       uni.showModal({
         title: "提示", content: "确定清空观看历史？",
         success: (res) => {
-          if (res.confirm) { uni.removeStorageSync("play_history"); this.historyList = [] }
+          if (res.confirm) { store.state.history = []; uni.removeStorageSync("play_history"); this.historyList = [] }
         }
       })
     },
@@ -302,7 +299,7 @@ export default {
       uni.showModal({
         title: "提示", content: "确定清空所有收藏？",
         success: (res) => {
-          if (res.confirm) { uni.removeStorageSync("my_collects"); this.collectList = [] }
+          if (res.confirm) { store.state.collects = []; uni.removeStorageSync("my_collects"); this.collectList = [] }
         }
       })
     },
@@ -317,7 +314,7 @@ export default {
         success: (res) => {
           this.qualityText = items[res.tapIndex]
           const qualityMap = { 0: "high", 1: "super", 2: "blue" }
-          uni.setStorageSync("default_quality", qualityMap[res.tapIndex])
+          store.setQuality(qualityMap[res.tapIndex])
         }
       })
     },
@@ -327,18 +324,18 @@ export default {
         success: (res) => {
           if (res.confirm) {
             // 保留关键数据
-            const history = uni.getStorageSync("play_history")
-            const collects = uni.getStorageSync("my_collects")
-            const follows = uni.getStorageSync("my_follows")
-            const quality = uni.getStorageSync("default_quality")
-            const searchHistory = uni.getStorageSync("search_history")
+            const history = store.state.history
+            const collects = store.state.collects
+            const follows = store.state.follows
+            const quality = store.getQuality()
+            const searchHistory = store.state.searchHistory
             uni.clearStorageSync()
             // 恢复
-            if (history) uni.setStorageSync("play_history", history)
-            if (collects) uni.setStorageSync("my_collects", collects)
-            if (follows) uni.setStorageSync("my_follows", follows)
-            if (quality) uni.setStorageSync("default_quality", quality)
-            if (searchHistory) uni.setStorageSync("search_history", searchHistory)
+            if (history.length) uni.setStorageSync("play_history", history)
+            if (collects.length) uni.setStorageSync("my_collects", collects)
+            if (follows.length) uni.setStorageSync("my_follows", follows)
+            if (quality) store.setQuality(quality)
+            if (searchHistory.length) uni.setStorageSync("search_history", searchHistory)
             this.cacheSize = "0MB"
             uni.showToast({ title: "缓存已清除", icon: "success" })
           }
@@ -354,7 +351,7 @@ export default {
         itemList: items,
         success: (res) => {
           this.subtitleText = items[res.tapIndex]
-          uni.setStorageSync("subtitle_enabled", res.tapIndex === 0)
+          store.setSubtitle(res.tapIndex === 0)
         }
       })
     },

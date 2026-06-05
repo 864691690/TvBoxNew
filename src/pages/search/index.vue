@@ -237,6 +237,7 @@ import { DEFAULT_PIC, fixPicUrl } from "@/api/config"
 import { autoFocus } from "@/utils/focus"
 import { getPinyinCandidates } from "@/data/pinyinMap"
 import { T9_KEYS, resolveT9 } from "@/utils/t9"
+import { store } from "@/store"
 
 export default {
   data() {
@@ -289,11 +290,7 @@ export default {
   },
   methods: {
     loadHistory() {
-      try {
-        this.historyList = uni.getStorageSync("search_history") || []
-      } catch (e) {
-        this.historyList = []
-      }
+      this.historyList = store.state.searchHistory
     },
     async loadHot() {
       try {
@@ -488,8 +485,10 @@ export default {
       } catch (e) { this.suggestList = [] }
     },
     doSearch() {
+      if (this.loading) return
       if (!this.keyword.trim()) return
-      this.saveHistory(this.keyword.trim())
+      store.addSearchHistory(this.keyword.trim())
+      this.historyList = store.state.searchHistory
       this.resultPage = 1
       this.resultList = []
       this.suggestList = []
@@ -497,13 +496,16 @@ export default {
     },
     searchHot(item) {
       this.keyword = item.vod_name
-      this.saveHistory(this.keyword)
+      store.addSearchHistory(this.keyword)
+      this.historyList = store.state.searchHistory
       this.resultPage = 1
       this.resultList = []
       this.search(this.keyword)
     },
     searchHistory(keyword) {
       this.keyword = keyword
+      store.addSearchHistory(keyword)
+      this.historyList = store.state.searchHistory
       this.resultPage = 1
       this.resultList = []
       this.search(keyword)
@@ -567,21 +569,10 @@ export default {
       } catch (e) {}
       this.loadingMore = false
     },
-    saveHistory(keyword) {
-      try {
-        let history = uni.getStorageSync("search_history") || []
-        history = history.filter(h => h !== keyword)
-        history.unshift(keyword)
-        history = history.slice(0, 20)
-        uni.setStorageSync("search_history", history)
-        this.historyList = history
-      } catch (e) {}
-    },
     clearHistory() {
-      try {
-        uni.removeStorageSync("search_history")
-        this.historyList = []
-      } catch (e) {}
+      store.state.searchHistory = []
+      uni.removeStorageSync("search_history")
+      this.historyList = []
     },
     goDetail(id) {
       uni.navigateTo({ url: `/pages/detail/index?id=${id}` })

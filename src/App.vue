@@ -1,5 +1,6 @@
 <script>
 import { checkUpdate } from "@/utils/update"
+import { store } from "@/store"
 
 export default {
   data() {
@@ -7,6 +8,8 @@ export default {
   },
   onLaunch() {
     console.log("App Launch")
+    // 初始化全局状态
+    store.init()
     // P1-1: 全局请求重试拦截器（网络波动自动重试）
     this.setupRetryInterceptor()
     // 网络状态监听
@@ -15,8 +18,8 @@ export default {
         uni.showToast({ title: "网络已断开", icon: "none", duration: 2500 })
       }
     })
-    // OTA: 启动时静默检查更新（延迟3秒，避免阻塞启动）
-    setTimeout(() => { checkUpdate() }, 3000)
+    // 检查网络状态，有网才检查更新
+    this.checkNetworkAndUpdate()
   },
   onShow() {
     console.log("App Show")
@@ -25,6 +28,27 @@ export default {
     console.log("App Hide")
   },
   methods: {
+    checkNetworkAndUpdate() {
+      // #ifdef APP-PLUS
+      try {
+        const main = plus.android.runtimeMainActivity()
+        const ConnectivityManager = plus.android.importClass("android.net.ConnectivityManager")
+        const cm = main.getSystemService("connectivity")
+        const activeNetwork = cm.getActiveNetworkInfo()
+        if (activeNetwork && activeNetwork.isConnected()) {
+          setTimeout(() => { checkUpdate() }, 3000)
+        } else {
+          console.log("[App] 无网络，跳过更新检查")
+        }
+      } catch (e) {
+        // 降级：直接尝试（uni-app 环境下可能无法获取 ConnectivityManager）
+        setTimeout(() => { checkUpdate() }, 3000)
+      }
+      // #endif
+      // #ifndef APP-PLUS
+      setTimeout(() => { checkUpdate() }, 3000)
+      // #endif
+    },
     setupRetryInterceptor() {
       let _origRequest = uni.request
       if (_origRequest._patched) return
@@ -32,22 +56,28 @@ export default {
         const maxRetry = opts._maxRetry || 2
         const retryDelay = opts._retryDelay || 1000
         let attempts = 0
+        let lastError = null
+
         function doAttempt() {
           attempts++
           _origRequest({
             ...opts,
             success(res) {
               if (res.statusCode >= 500 && attempts < maxRetry) {
-                setTimeout(doAttempt, retryDelay * attempts)
+                // 指数退避: 1s, 2s, 4s...
+                setTimeout(doAttempt, retryDelay * Math.pow(2, attempts - 1))
               } else {
                 opts.success && opts.success(res)
+                opts.complete && opts.complete(res)
               }
             },
             fail(err) {
+              lastError = err
               if (attempts < maxRetry) {
-                setTimeout(doAttempt, retryDelay * attempts)
+                setTimeout(doAttempt, retryDelay * Math.pow(2, attempts - 1))
               } else {
                 opts.fail && opts.fail(err)
+                opts.complete && opts.complete(err)
               }
             }
           })

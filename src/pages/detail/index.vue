@@ -146,6 +146,7 @@ import { getVodDetail, getVodList } from "@/api/vod"
 import { DEFAULT_PIC, fixPicUrl } from "@/api/config"
 import { autoFocus } from "@/utils/focus"
 import { parseEpisodeCount, saveEpCache } from "@/utils/epCache"
+import { store } from "@/store"
 import BackButton from "@/components/BackButton.vue"
 
 export default {
@@ -276,16 +277,10 @@ export default {
       if (history) this.historyEp = history.episode
     },
     getPlayHistory() {
-      try {
-        const history = uni.getStorageSync("play_history") || []
-        return history.find(h => h.vod_id === this.vodId)
-      } catch (e) { return null }
+      return store.getHistory(this.vodId)
     },
     loadCollectStatus() {
-      try {
-        const collects = uni.getStorageSync("my_collects") || []
-        this.collected = collects.some(c => c.vod_id === this.vodId)
-      } catch (e) { this.collected = false }
+      this.collected = store.isCollected(this.vodId)
     },
     fixItem(item) {
       return { ...item, vod_pic: this.fixPicUrl(item.vod_pic), vod_content: this.stripHtml(item.vod_content) }
@@ -297,46 +292,27 @@ export default {
     },
     toggleDesc() { this.descExpanded = !this.descExpanded },
     toggleCollect() {
-      try {
-        let collects = uni.getStorageSync("my_collects") || []
-        if (this.collected) {
-          collects = collects.filter(c => c.vod_id !== this.vodId)
-        } else {
-          collects.unshift({
-            vod_id: this.vodId,
-            vod_name: this.detail.vod_name,
-            vod_pic: this.detail.vod_pic,
-            vod_remarks: this.detail.vod_remarks,
-            vod_year: this.detail.vod_year,
-            type_id: this.detail.type_id || this.detail.type_id_1,
-            time: Date.now()
-          })
+      const item = {
+        vod_id: this.vodId,
+        vod_name: this.detail.vod_name,
+        vod_pic: this.detail.vod_pic,
+        vod_remarks: this.detail.vod_remarks,
+        type_id: this.detail.type_id || this.detail.type_id_1,
+        totalEp: this.episodeList.length
+      }
+      this.collected = store.toggleCollect(item)
+      // 电视剧收藏时自动加入追剧列表
+      if (this.collected && this.detail.type_id === 2) {
+        if (!store.isFollowing(this.vodId)) {
+          store.toggleFollow(item)
         }
-        uni.setStorageSync("my_collects", collects)
-        this.collected = !this.collected
-
-        // P1-6: 连续剧收藏时自动加入追剧列表
-        if (this.collected && this.detail.type_id === 2) {
-          let follows = uni.getStorageSync("my_follows") || []
-          if (!follows.some(f => f.vod_id === this.vodId)) {
-            follows.unshift({
-              vod_id: this.vodId,
-              vod_name: this.detail.vod_name,
-              vod_pic: this.detail.vod_pic,
-              vod_remarks: this.detail.vod_remarks,
-              totalEp: this.episodeList.length,
-              time: Date.now()
-            })
-            uni.setStorageSync("my_follows", follows)
-          }
+      }
+      // 取消收藏时也移除追剧
+      if (!this.collected) {
+        if (store.isFollowing(this.vodId)) {
+          store.toggleFollow(item)
         }
-        // 取消收藏时也移除追剧
-        if (!this.collected) {
-          let follows = uni.getStorageSync("my_follows") || []
-          follows = follows.filter(f => f.vod_id !== this.vodId)
-          uni.setStorageSync("my_follows", follows)
-        }
-      } catch (e) {}
+      }
     },
     playFirst() {
       if (this.episodeList.length > 0) {
