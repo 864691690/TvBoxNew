@@ -1,0 +1,65 @@
+{
+    "name": "星途影视-tv",
+    "appid": "__UNI__B9F69F6",
+    "description": "TV Box App",
+    "versionName": "1.23.0",
+    "versionCode": "330",
+    "transformPx": false,
+    "app-plus": {
+        "usingComponents": true,
+        "nvueStyleCompiler": "uni-app",
+        "compilerVersion": 3,
+        "compatible": {
+            "ignoreVersion": true
+        },
+        "splashscreen": {
+            "alwaysShowBeforeRender": true,
+            "waiting": true,
+            "autoclose": true,
+            "delay": 0
+        },
+        "modules": {
+            "VideoPlayer": {}
+        },
+        "distribute": {
+            "android": {
+                "permissions": [
+                    "<uses-permission android:name=\"android.permission.INTERNET\" />",
+                    "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />",
+                    "<uses-permission android:name=\"android.permission.REQUEST_INSTALL_PACKAGES\" />",
+                    "<uses-permission android:name=\"android.permission.INSTALL_PACKAGES\" />",
+                    "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" />",
+                    "<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" />"
+                ],
+                "leanback": true
+            }
+        }
+    },
+    "quickapp": {},
+    "mp-weixin": {
+        "appid": "",
+        "setting": {
+            "urlCheck": false
+        },
+        "usingComponents": true
+    },
+    "mp-alipay": {
+        "usingComponents": true
+    },
+    "mp-baidu": {
+        "usingComponents": true
+    },
+    "mp-toutiao": {
+        "usingComponents": true
+    },
+    "uniStatistics": {
+        "enable": false
+    },
+    "h5": {
+        "title": "TV Box App",
+        "router": {
+            "mode": "hash"
+        }
+    },
+    "vueVersion": "3"
+}
