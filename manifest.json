@@ -2,8 +2,8 @@
     "name": "星途影视-tv",
     "appid": "__UNI__B9F69F6",
     "description": "TV Box App",
-    "versionName": "1.23.0",
-    "versionCode": "330",
+    "versionName": "1.24.0",
+    "versionCode": "340",
     "transformPx": false,
     "app-plus": {
         "usingComponents": true,
