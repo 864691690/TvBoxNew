@@ -83,10 +83,10 @@ export const getVodDetail = (id) => request(API.detail(id))
 
 // 通过自定义筛选API获取数据（支持year/area/class/score/order服务端筛选）
 export async function getFilteredVodList(catId, year, area, by, classTag, score, page = 1, limit = 20) {
-  const params = { t: catId, page, limit }
+  const params = { t: catId, page: page, limit: Math.min(limit, 48) }
+  if (by) params.order = by
   if (year) params.year = year
   if (area) params.area = area
-  if (by) params.order = by
   if (classTag) params.class = classTag
   if (score) params.score = score
   return request(API.filter(params))

@@ -23,7 +23,8 @@ const state = reactive({
   searchHistory: [],
   defaultQuality: 'high',
   subtitleEnabled: false,
-  historySort: 'time'
+  historySort: 'time',
+  statusBarHeight: 0  // 状态栏高度（px），由 App.vue onLaunch 写入
 })
 
 export const store = {
@@ -39,12 +40,20 @@ export const store = {
     state.historySort = load('_history_sort', 'time')
   },
 
-  // 播放历史
+  // 状态栏高度（px）
+  setStatusBarHeight(px) {
+    state.statusBarHeight = px || 0
+  },
+  getStatusBarHeight() {
+    return state.statusBarHeight
+  },
+
+  // 播放历史（最多200条）
   addHistory(record) {
     const idx = state.history.findIndex(h => h.vod_id === record.vod_id)
     if (idx >= 0) state.history[idx] = record
     else state.history.unshift(record)
-    state.history = state.history.slice(0, 50)
+    if (state.history.length > 200) state.history.length = 200
     save('play_history', state.history)
   },
 
@@ -52,7 +61,7 @@ export const store = {
     return state.history.find(h => h.vod_id === vodId) || null
   },
 
-  // 收藏
+  // 收藏（最多100条）
   isCollected(vodId) {
     return state.collects.some(c => c.vod_id === vodId)
   },
@@ -64,6 +73,7 @@ export const store = {
       return false
     } else {
       state.collects.push({ vod_id: item.vod_id, vod_name: item.vod_name, vod_pic: item.vod_pic, vod_remarks: item.vod_remarks })
+      if (state.collects.length > 100) state.collects.length = 100
       save('my_collects', state.collects)
       return true
     }
@@ -93,6 +103,10 @@ export const store = {
     state.searchHistory.unshift(keyword)
     if (state.searchHistory.length > 20) state.searchHistory.length = 20
     save('search_history', state.searchHistory)
+  },
+  clearSearchHistory() {
+    state.searchHistory = []
+    save('search_history', [])
   },
 
   // 设置

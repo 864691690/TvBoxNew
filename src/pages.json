@@ -1,5 +1,13 @@
 {
   "pages": [
+    { "path": "pages-mobile/home/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "首页" } },
+    { "path": "pages-mobile/shortdrama/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "短剧" } },
+    { "path": "pages-mobile/category/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "分类" } },
+    { "path": "pages-mobile/search/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "搜索" } },
+    { "path": "pages-mobile/mine/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "我的" } },
+    { "path": "pages-mobile/detail/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "详情" } },
+    { "path": "pages-mobile/player/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "播放", "pageOrientation": "landscape-primary" } },
+    { "path": "pages-mobile/about/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "关于" } },
     { "path": "pages/index/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "首页" } },
     { "path": "pages/category/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "分类" } },
     { "path": "pages/detail/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "详情" } },
@@ -8,15 +16,24 @@
     { "path": "pages/mine/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "我的" } },
     { "path": "pages/about/index", "style": { "navigationStyle": "custom", "navigationBarTitleText": "关于" } }
   ],
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#E53935",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages-mobile/home/index", "text": "首页" },
+      { "pagePath": "pages-mobile/shortdrama/index", "text": "短剧" },
+      { "pagePath": "pages-mobile/category/index", "text": "发现" },
+      { "pagePath": "pages-mobile/mine/index", "text": "我的" }
+    ]
+  },
   "globalStyle": {
-    "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "极光影视",
-    "navigationBarBackgroundColor": "#0a1628",
-    "backgroundColor": "#0a1628",
-    "backgroundTextStyle": "light",
-    "pageOrientation": "landscape",
-    "tv": {
-      "focusable": true
-    }
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "星途影视",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#F5F5F5",
+    "backgroundTextStyle": "dark",
+    "pageOrientation": "portrait-primary"
   }
 }

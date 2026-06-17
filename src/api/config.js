@@ -20,10 +20,20 @@ export const DEFAULT_PIC = "/static/no-cover.svg"
  * - 无扩展名补 .jpg
  */
 export function fixPicUrl(url) {
-  if (!url) return ""
+  if (!url) return DEFAULT_PIC
+  // 已经是相对路径 logo
+  if (url === DEFAULT_PIC) return url
+  // 相对路径补全
   if (url.startsWith("/")) url = API_HOST + url
+  // HTTP 升级
   if (url.startsWith("http://")) url = "https://" + url.substring(7)
-  if (!url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i)) url = url + ".jpg"
+  // 已有图片扩展名 → 不再追加
+  if (url.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)([?#].*)?$/i)) return url
+  // 无扩展名 + 看起来像路径 → 补 .jpg
+  // 排除明显不是图片路径的（纯域名、含 #、query string 无路径等）
+  if (url.includes('/') && !url.includes('.') && !url.includes('#')) {
+    url = url + '.jpg'
+  }
   return url
 }
 
@@ -47,8 +57,8 @@ export const API = {
   },
   // 视频详情
   detail: (id) => `${API_HOST}${API_PREFIX}/api.php/provide/vod/?ac=detail&ids=${id}&json=1`,
-  // 搜索
-  search: (wd, page = 1) => `${API_HOST}${API_PREFIX}/api.php/provide/vod/?ac=videolist&wd=${encodeURIComponent(wd)}&pg=${page}&json=1`,
+  // 搜索（苹果CMS V10 标准接口：ac=detail 支持关键词搜索）
+  search: (wd, page = 1) => `${API_HOST}${API_PREFIX}/api.php/provide/vod/?ac=detail&wd=${encodeURIComponent(wd)}&pg=${page}&json=1`,
   // 热门
   hot: (page = 1) => `${API_HOST}${API_PREFIX}/api.php/provide/vod/?ac=videolist&order=hits&pg=${page}&json=1`,
   // 最新

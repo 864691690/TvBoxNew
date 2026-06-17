@@ -10,8 +10,14 @@ export default {
     console.log("App Launch")
     // 初始化全局状态
     store.init()
+    // 读取状态栏高度并设置 CSS 变量
+    this.setupStatusBar()
     // P1-1: 全局请求重试拦截器（网络波动自动重试）
     this.setupRetryInterceptor()
+    // 夜间模式跟随系统
+    this.setupDarkMode()
+    // 隐藏原生 tabBar，使用自定义 CustomTabbar
+    uni.hideTabBar({ animation: false })
     // 网络状态监听
     uni.onNetworkStatusChange((res) => {
       if (!res.isConnected) {
@@ -28,6 +34,24 @@ export default {
     console.log("App Hide")
   },
   methods: {
+    setupStatusBar() {
+      // 读取状态栏高度，写入 store 和全局 CSS 变量
+      try {
+        const sys = uni.getSystemInfoSync()
+        // statusBarHeight: 状态栏高度(px)；safeArea.top: 安全区顶部距离
+        let h = sys.statusBarHeight || (sys.safeArea && sys.safeArea.top) || 0
+        if (!h || h < 0) h = 24  // 兜底值
+        store.setStatusBarHeight(h)
+        // 写入全局 CSS 变量（rpx: 1px = 2rpx）
+        const rpx = h * 2
+        document.documentElement.style.setProperty('--status-bar-height', rpx + 'rpx')
+        console.log('[App] statusBarHeight:', h, 'px ->', rpx, 'rpx')
+      } catch (e) {
+        console.error('[App] setupStatusBar fail:', e)
+        store.setStatusBarHeight(24)
+        document.documentElement.style.setProperty('--status-bar-height', '48rpx')
+      }
+    },
     checkNetworkAndUpdate() {
       // #ifdef APP-PLUS
       try {
@@ -49,6 +73,84 @@ export default {
       setTimeout(() => { checkUpdate() }, 3000)
       // #endif
     },
+    setupDarkMode() {
+      // 如果用户手动设置过暗色偏好，优先使用
+      const saved = this._loadDarkPref()
+      if (saved !== null) {
+        this._applyDark(saved)
+        return
+      }
+      // 否则跟随系统
+      this._systemDark()
+    },
+
+    _loadDarkPref() {
+      try {
+        const v = uni.getStorageSync('dark_mode')
+        if (v === 'true') return true
+        if (v === 'false') return false
+      } catch (e) {}
+      return null
+    },
+
+    _systemDark() {
+      try {
+        // #ifdef APP-PLUS
+        const Configuration = plus.android.importClass('android.content.res.Configuration')
+        const res = plus.android.runtimeMainActivity().getResources()
+        const config = res.getConfiguration()
+        const isDark = (config.uiMode & 0x0F) === 0x02
+        this._applyDark(isDark)
+        // 监听系统变化
+        plus.android.addEventListener(plus.android.currentWebview(), 'configuration_changed', () => {
+          // 仅当用户未手动设置时才跟随系统
+          if (this._loadDarkPref() !== null) return
+          setTimeout(() => {
+            try {
+              const newConfig = plus.android.runtimeMainActivity().getResources().getConfiguration()
+              this._applyDark((newConfig.uiMode & 0x0F) === 0x02)
+            } catch (e) {}
+          }, 300)
+        })
+        // #endif
+        // #ifndef APP-PLUS
+        const mq = window.matchMedia('(prefers-color-scheme: dark)')
+        this._applyDark(mq.matches)
+        mq.addEventListener && mq.addEventListener('change', (e) => {
+          if (this._loadDarkPref() !== null) return
+          this._applyDark(e.matches)
+        })
+        // #endif
+      } catch (e) {
+        console.warn('[App] systemDark fallback:', e)
+      }
+    },
+
+    _applyDark(isDark) {
+      try {
+        if (isDark) {
+          document.documentElement.classList.add('dark')
+          if (document.body) document.body.classList.add('dark')
+          // uni-app app-plus 中还需要操作 page 元素
+          document.querySelector('page')?.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+          if (document.body) document.body.classList.remove('dark')
+          document.querySelector('page')?.classList.remove('dark')
+        }
+      } catch (e) {}
+    },
+
+    /**
+     * 提供给外部页面调用的暗色切换方法
+     * mine 页面手动切换时会调用此方法
+     */
+    setDarkMode(isDark) {
+      this._applyDark(isDark)
+      try { uni.setStorageSync('dark_mode', String(isDark)) } catch (e) {}
+    },
+
+
     setupRetryInterceptor() {
       let _origRequest = uni.request
       if (_origRequest._patched) return
@@ -91,91 +193,57 @@ export default {
 </script>
 
 <style>
-page { background: #0f0f1a; color: #ffffff; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; }
+page { background: var(--bg-page); color: var(--text-primary); font-family: sans-serif; }
 ::-webkit-scrollbar { display: none; }
 
-/* P2-2: 页面过渡动画 */
+/* 夜间模式过渡 */
+page, page.dark * {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 通用暗色覆盖 */
+page.dark .page { background: var(--bg-page) !important; }
+page.dark .card,
+page.dark .hero-section,
+page.dark .top-bar,
+page.dark .bottom-panel,
+page.dark .panel-drawer,
+page.dark .resume-card,
+page.dark .filter-tag,
+page.dark .route-chip,
+page.dark .ep-item,
+page.dark .ep-group-header,
+page.dark .h-card,
+page.dark .quick-row { background: var(--bg-card) !important; }
+
+page.dark .title,
+page.dark .section-title,
+page.dark .card-name,
+page.dark .hero-info .title,
+page.dark .top-title,
+page.dark .quick-text,
+page.dark .resume-title,
+page.dark .panel-title { color: var(--text-primary) !important; }
+
+page.dark .meta-item,
+page.dark .desc-text,
+page.dark .score-source,
+page.dark .card-sub,
+page.dark .h-sub,
+page.dark .quick-text,
+page.dark .resume-sub { color: var(--text-secondary) !important; }
+
+/* 页面过渡动画 */
 uni-page-body {
-  animation: pageFadeIn 0.3s ease;
+  animation: pageFadeIn 0.25s ease;
 }
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateX(30rpx); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* P5: TV 多分辨率适配 - 基础字体增强 */
-/* uni-app rpx 基准: 750rpx = 屏幕宽度，已自动等比缩放 */
-/* 以下针对不同分辨率做微调，确保 TV 上阅读舒适 */
-
-/* 720p 基准 (1280x720): 不做额外调整，rpx 已适配 */
-/* 1080p Full HD (1920x1080): 提高最小字号 */
-@media screen and (min-width: 1920px) {
-  page {
-    --font-mini: 26rpx;
-    --font-small: 30rpx;
-    --font-base: 34rpx;
-    --font-large: 42rpx;
-    --font-xl: 56rpx;
-    --font-hero: 80rpx;
-  }
-}
-/* 4K Ultra HD (3840x2160): 大幅提高字号 */
-@media screen and (min-width: 3200px) {
-  page {
-    --font-mini: 36rpx;
-    --font-small: 42rpx;
-    --font-base: 48rpx;
-    --font-large: 60rpx;
-    --font-xl: 80rpx;
-    --font-hero: 110rpx;
-  }
-}
-
-/* 默认变量（720p 及以下） */
-page {
-  --font-mini: 22rpx;
-  --font-small: 26rpx;
-  --font-base: 30rpx;
-  --font-large: 38rpx;
-  --font-xl: 48rpx;
-  --font-hero: 64rpx;
-}
-
-/* 全局最小可读字号加固 - 所有小于 22rpx 的文本在 TV 上阅读吃力 */
-text {
-  /* 继承父级字号，不强制覆盖 */
-}
-
-/* 全局通用卡片样式 - 减少各页面重复 */
-.card {
-  display: inline-block; width: 240rpx; margin-right: 30rpx; vertical-align: top; white-space: normal;
-  border-radius: 16rpx; overflow: hidden; background: rgba(20,40,60,0.6);
-  border: 4rpx solid transparent;
-  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
-}
-.card:focus { transform: scale(1.08); box-shadow: 0 0 0 4rpx #00d4ff, 0 0 30rpx rgba(0,212,255,0.6); }
-.card-img { width: 240rpx; height: 340rpx; background: #1a2a3a; }
-.card-title { display: block; padding: 16rpx; font-size: 30rpx; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-remark { display: block; padding: 0 16rpx 16rpx; font-size: 28rpx; color: #00d4ff; }
-
-.card-lg {
-  display: inline-block; width: 400rpx; margin-right: 30rpx; vertical-align: top; white-space: normal;
-  border-radius: 16rpx; overflow: hidden; background: rgba(20,40,60,0.6); position: relative;
-  border: 4rpx solid transparent;
-  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
-}
-.card-lg:focus { transform: scale(1.08); box-shadow: 0 0 0 4rpx #00d4ff, 0 0 30rpx rgba(0,212,255,0.6); }
-.card-lg-img { width: 400rpx; height: 240rpx; background: #1a2a3a; }
-
-/* 通用返回按钮 - 组件已提供，此为 scoped 降级兼容 */
-.back-btn {
-  display: flex; align-items: center; padding: 16rpx 24rpx;
-  background: rgba(0,212,255,0.15); border-radius: 12rpx;
-  border: 2rpx solid rgba(0,212,255,0.3);
-  transition: all 0.2s ease;
-}
-.back-btn:focus { transform: scale(1.08); background: rgba(0,212,255,0.3); box-shadow: 0 0 20rpx rgba(0,212,255,0.5); }
-.back-icon { font-size: 48rpx; color: #00d4ff; margin-right: 12rpx; }
-.back-text { font-size: 28rpx; color: #00d4ff; }
-
+/* SVG icon global styles */
+.icon { vertical-align: middle; flex-shrink: 0; display: inline-block; }
+.green-dot { vertical-align: middle; }
+.heart-icon, .heart-icon-outline { vertical-align: middle; display: inline-block; }
 </style>

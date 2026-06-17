@@ -14,7 +14,7 @@
 import { VERSION_CODE } from "@/utils/version"
 
 
-const UPDATE_CHECK_URL = "https://api.move.wuyaoxuexi.cn/tvbox_update.json"
+const UPDATE_CHECK_URL = "http://api.move.wuyaoxuexi.cn/tvboxapp_update.json"
 
 let _lastCheckTime = 0
 const CHECK_INTERVAL = 3600000
